@@ -1,30 +1,38 @@
-name: Build Godot Project
-
-on:
-  push: {}
-  pull_request: {}
+# Whenever a tag push matching pattern "v*" then run the job
+on: 
+  push
 
 jobs:
-  Godot:
+  # job id, can be anything
+  export_game:
+    # Always use ubuntu-latest for this action
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux, windows, mac]
+    # Add permission for release creation. Can be made narrower according to your needs
+    permissions: write-all
+    # Job name, can be anything
+    name: Export Game
     steps:
-      - uses: actions/checkout@v2
-        with:
-          lfs: true
-      - name: Build
-        id: build
-        uses: yeslayla/build-godot-action@v1.5.0
-        with:
-          name: example
-          preset: ${{ matrix.platform }}
-          debugMode: "true"
-          package: "true"
-          projectDir: "test_autobilding_godot"
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Client - ${{ matrix.platform }}
-          path: ${{ github.workspace }}/${{ steps.build.outputs.build }}
+      # Always include the checkout step so that 
+      # your project is available for Godot to export
+    - name: checkout
+      uses: actions/checkout@v3.3.0
+    - name: export game
+      id: export
+      uses: firebelley/godot-export@master
+      with:
+          godot_executable_download_url: https://downloads.tuxfamily.org/godotengine/4.0/Godot_v4.0-stable_linux.x86_64.zip
+          godot_export_templates_download_url: https://downloads.tuxfamily.org/godotengine/4.0/Godot_v4.0-stable_export_templates.tpz
+          relative_project_path: ./examples/project-godot-4 # build the godot 4 project
+          relative_export_path: ./my/build/destination # move export output to this directory relative to git root
+          archive_output: true
+          wine_path: ${{ steps.wine_install.outputs.WINE_PATH }}
+
+      # This release action has worked well for me. However, you can most likely use any release action of your choosing.
+      # https://github.com/ncipollo/release-action
+    - name: create release
+      uses: ncipollo/release-action@v1.12.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generateReleaseNotes: true
+        tag: ${{ github.ref_name }}
+        artifacts: ${{ steps.export.outputs.archive_directory }}/*
