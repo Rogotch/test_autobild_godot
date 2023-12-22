@@ -22,7 +22,6 @@ jobs:
           preset: ${{ matrix.platform }}
           debugMode: "true"
           package: "true"
-          projectDir: "test_autobilding_godot"
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
